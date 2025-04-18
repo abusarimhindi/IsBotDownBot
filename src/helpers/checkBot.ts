@@ -6,12 +6,12 @@ import {
 } from '@/models/Chat'
 import { DocumentType } from '@typegoose/typegoose'
 import { InlineKeyboard } from 'grammy'
+import { getEntityByUsername, sendStartToBot } from '@/helpers/telegramClient'
 import {
   isBotBeingChecked,
   markBotAsBeingChecked,
   markBotAsNotBeingChecked,
 } from '@/helpers/botsBeingChecked'
-import { sendStartToBot } from '@/helpers/telegramClient'
 import { v4 as uuid } from 'uuid'
 import i18n from '@/helpers/i18n'
 import mainBot from '@/helpers/bot'
@@ -25,7 +25,7 @@ const promisesMap: {
   }
 } = {}
 
-const intervalInSeconds = 5
+const intervalInSeconds = 10
 setInterval(() => {
   const now = Date.now()
   const promisesToRemove = []
@@ -56,6 +56,15 @@ export async function checkBotAndDoSendout(
   markBotAsBeingChecked(bot.telegramId)
   // Check bot
   try {
+    // Try to fix fetching id by username
+    if (!bot.fetchedIdByUsername) {
+      console.log(
+        `Fixing not being able to use entity for the bot ${bot.username}, ${bot.telegramId}`
+      )
+      await getEntityByUsername(bot.username)
+      bot.fetchedIdByUsername = true
+      await bot.save()
+    }
     // Check if bot is alive
     const isBotAlive = await checkBotInternal(bot.telegramId)
     // Set last checked

@@ -19,6 +19,8 @@ export class Bot extends FindOrCreate {
   downSince?: Date
   @prop({ required: true, default: new Date() })
   lastChecked: Date
+  @prop({ required: true, default: true })
+  fetchedIdByUsername: boolean
 }
 
 const BotModel = getModelForClass(Bot, {
@@ -26,7 +28,19 @@ const BotModel = getModelForClass(Bot, {
 })
 
 export async function findOrCreateBot(username: string, telegramId: number) {
-  const { doc } = await BotModel.findOrCreate({ username }, { telegramId })
+  let doc: DocumentType<Bot>
+  try {
+    const result = await BotModel.findOrCreate({ username }, { telegramId })
+    doc = result.doc
+  } catch (error) {
+    console.error(
+      "Couldn't do findOrCreate:",
+      error instanceof Error ? error.message : error
+    )
+    await BotModel.findOneAndDelete({ telegramId })
+    const result = await BotModel.findOrCreate({ username }, { telegramId })
+    doc = result.doc
+  }
   return doc
 }
 

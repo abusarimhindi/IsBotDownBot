@@ -1,10 +1,10 @@
 import { NewMessage, NewMessageEvent } from 'telegram/events'
-import { StoreSession } from 'telegram/sessions'
+import { StringSession } from 'telegram/sessions'
 import { TelegramClient } from 'telegram'
 import { verifyBotIsAlive } from '@/helpers/checkBot'
 import input from 'input'
 
-const storeSession = new StoreSession('telegram_session')
+const storeSession = new StringSession(process.env.SESSION)
 
 async function eventHandler(event: NewMessageEvent) {
   if (event.isPrivate) {
@@ -22,7 +22,7 @@ async function eventHandler(event: NewMessageEvent) {
       return
     }
     if (sender && 'id' in sender && sender.id) {
-      verifyBotIsAlive(sender.id)
+      verifyBotIsAlive(Number(sender.id))
     }
   }
 }
@@ -36,12 +36,13 @@ export async function startTelegramClient() {
     { connectionRetries: 5 }
   )
   await client.start({
-    phoneNumber: async () => await input.text('number ?'),
-    password: async () => await input.text('password?'),
+    phoneNumber: async () => await input.text('Phone ?'),
+    password: async () => await input.text('Password ?'),
     phoneCode: async () => await input.text('Code ?'),
     onError: (err) => console.log(err),
   })
   client.addEventHandler(eventHandler, new NewMessage({}))
+  console.log(client.session.save())
 }
 
 export function sendStartToBot(id: number) {
@@ -49,6 +50,13 @@ export function sendStartToBot(id: number) {
     throw new Error('client not connected')
   }
   return client.sendMessage(id, { message: '/start' })
+}
+
+export function sendStartToBotByUsername(username: string) {
+  if (!client.connected) {
+    throw new Error('client not connected')
+  }
+  return client.sendMessage(username, { message: '/start' })
 }
 
 export function getEntityByUsername(username: string) {
